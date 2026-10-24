@@ -1,0 +1,80 @@
+-- 1. Overall volume and approval rate
+SELECT COUNT(*) AS requests,
+       ROUND(AVG(APPROVED) * 100, 2) AS approval_rate_pct
+FROM requests
+ requests  approval_rate_pct
+    32769              94.21
+
+-- 2. Exact duplicate requests (same resource, manager and role on every field)
+SELECT COUNT(*) AS duplicate_rows FROM (
+  SELECT COUNT(*) AS n
+  FROM requests
+  GROUP BY RESOURCE, MGR_ID, ROLE_ROLLUP_1, ROLE_ROLLUP_2, ROLE_DEPTNAME,
+           ROLE_TITLE, ROLE_FAMILY_DESC, ROLE_FAMILY, ROLE_CODE, APPROVED
+  HAVING n > 1
+)
+ duplicate_rows
+              0
+
+-- 3. Departments with the lowest approval rates (min 200 requests)
+SELECT ROLE_DEPTNAME,
+       COUNT(*) AS requests,
+       ROUND(AVG(APPROVED) * 100, 1) AS approval_rate_pct
+FROM requests
+GROUP BY ROLE_DEPTNAME
+HAVING COUNT(*) >= 200
+ORDER BY approval_rate_pct ASC
+LIMIT 10
+ ROLE_DEPTNAME  requests  approval_rate_pct
+        118992       206               62.6
+        118623       284               83.5
+        117945       659               86.5
+        118391       231               87.0
+        118522       251               88.0
+        117920       597               90.6
+        120663       335               91.3
+        118352       305               91.5
+        117941       763               91.7
+        117884       546               92.3
+
+-- 4. Peer-group outliers: requests for a resource that nobody else in the same
+--    department has requested, while 5+ requests for it come from other departments
+WITH dept_pair AS (
+  SELECT ROLE_DEPTNAME, RESOURCE, COUNT(*) AS dept_n
+  FROM requests GROUP BY ROLE_DEPTNAME, RESOURCE
+),
+res AS (
+  SELECT RESOURCE, COUNT(*) AS res_n FROM requests GROUP BY RESOURCE
+)
+SELECT CASE WHEN dp.dept_n = 1 AND res.res_n - dp.dept_n >= 5
+            THEN 'Outlier' ELSE 'Normal' END AS peer_group_status,
+       COUNT(*) AS requests,
+       ROUND((1 - AVG(r.APPROVED)) * 100, 1) AS denial_rate_pct
+FROM requests r
+JOIN dept_pair dp ON r.ROLE_DEPTNAME = dp.ROLE_DEPTNAME AND r.RESOURCE = dp.RESOURCE
+JOIN res ON r.RESOURCE = res.RESOURCE
+GROUP BY peer_group_status
+peer_group_status  requests  denial_rate_pct
+           Normal     27940              5.0
+          Outlier      4829             10.3
+
+-- 5. Most-requested resources and how often they are denied
+SELECT RESOURCE,
+       COUNT(*) AS requests,
+       ROUND((1 - AVG(APPROVED)) * 100, 1) AS denial_rate_pct
+FROM requests
+GROUP BY RESOURCE
+ORDER BY requests DESC
+LIMIT 10
+ RESOURCE  requests  denial_rate_pct
+     4675       839              0.4
+    79092       484              3.3
+    75078       409              1.0
+    25993       409              4.6
+     3853       404              1.5
+    75834       299              1.7
+     6977       299              5.4
+    32270       295              5.4
+    42085       247              4.0
+    17308       239              1.3
+

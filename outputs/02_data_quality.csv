@@ -1,0 +1,10 @@
+,value
+rows,32769
+null_cells,0
+duplicate_rows,0
+distinct_resources,7518
+distinct_managers,4243
+distinct_role_titles,343
+resources_requested_once,3766
+ROLE_TITLE_and_ROLE_CODE_are_1_to_1,True
+overall_approval_rate,0.9421

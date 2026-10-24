@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# Environment / secrets — never commit credentials
+.env
+*.env
+config.ini
+secrets.json
+
+# Power BI temp files
+*.pbix.tmp
+~$*.pbix
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
